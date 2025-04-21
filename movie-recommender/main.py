@@ -1,5 +1,5 @@
-from data.dataLoader import IMDbLoader, MovieLensLoader
-from preprocessing.preprocess import MetadataPreprocessor, RatingsPreprocessor
+from utils.dataLoader import IMDbLoader, MovieLensLoader
+from evaluation.preprocess import MetadataPreprocessor, RatingsPreprocessor
 from models.contentFilter import ContentBasedRecommender
 from models.collabFilter import CollaborativeRecommender
 from models.hybrid import HybridRecommender
