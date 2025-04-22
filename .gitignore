@@ -1,13 +1,3 @@
-# === MovieLens Data ===
-ml-100k/*.csv
-ml-100k/*.txt
-ml-100k/*.data
-ml-100k/*.info
-ml-100k/*.item
-ml-100k/*.user
-ml-100k/*.base
-ml-100k/*.test
-ml-100k/README*
 
 # === Cached Outputs ===
 *.pkl
@@ -26,8 +16,6 @@ __pycache__/
 *.py[cod]
 *.pyc
 *.pyo
-
-
 
 # === VS Code and MacOS System Files ===
 .vscode/
