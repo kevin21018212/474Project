@@ -20,6 +20,6 @@ class HybridRecommender:
     def recommendMovies(self, userId: int, userProfile: pd.Series, topN: int = 10) -> List[int]:
         pass
 
-    # Adjust hybrid strategy (e.g., increase content weight in cold-start)
+    # Adjust hybrid strategy (increase content weight in cold-start)
     def updateAlpha(self, newAlpha: float) -> None:
         pass
