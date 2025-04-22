@@ -8,11 +8,36 @@ from utils.metrics import computeRmse, computePrecisionAtK
 
 # Load datasets (IMDb metadata, MovieLens ratings)
 def loadData():
-    pass
+    # Load OMDb metadata (cache or by fetching from OMDb API)
+    imdbLoader = IMDbLoader("ml-100k/links.csv")
+    metadataDf = imdbLoader.loadMetadata()
+    metadataDf = imdbLoader.preprocessMetadata()
+
+    # Load ratings from ratings.csv and normalize scores
+    movielensLoader = MovieLensLoader("ml-100k/ratings.csv")
+    ratingsDf = movielensLoader.loadRatings()
+    ratingsDf = movielensLoader.preprocessRatings()
+    
+    return metadataDf, ratingsDf
 
 # Preprocess metadata and ratings
-def preprocessData(metadataDF, ratingsDF):
-    pass
+def preprocessData(metadataDf, ratingsDf):
+    
+    # Create and apply metadata feature transformations
+    metadataProcessor = MetadataPreprocessor(metadataDf)
+
+    Categories = metadataProcessor.encodeCategories()
+
+    # Convert movie plot text,normalize, and combine into a matrix
+    tfidfFeatures = metadataProcessor.applyTfidfToPlots()
+    voteFeatures = metadataProcessor.normalizeNumericalFeatures()
+    contentFeatures = Categories.join(tfidfFeatures).join(voteFeatures)
+
+    # Binarize user ratings
+    ratingsProcessor = RatingsPreprocessor(ratingsDf)
+    binaryRatings = ratingsProcessor.binarizeRatings(threshold=0.6)
+    return contentFeatures, binaryRatings
+
 
 # Initialize user profile with favorite movies
 def initializeUser(userId: int, favoriteMovieIds: list) -> UserProfile:
