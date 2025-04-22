@@ -1,10 +1,10 @@
 from utils.dataLoader import IMDbLoader, MovieLensLoader
-from evaluation.preprocess import MetadataPreprocessor, RatingsPreprocessor
+from utils.dataLoader import MetadataPreprocessor, RatingsPreprocessor
 from models.contentFilter import ContentBasedRecommender
 from models.collabFilter import CollaborativeRecommender
 from models.hybrid import HybridRecommender
 from user.userProfile import UserProfile
-from evaluation.metrics import computeRmse, computePrecisionAtK
+from utils.metrics import computeRmse, computePrecisionAtK
 
 # Load datasets (IMDb metadata, MovieLens ratings)
 def loadData():
