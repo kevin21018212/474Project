@@ -28,14 +28,6 @@ class UserProfileTester:
         for movieId, feedback in feedbackExamples.items():
             self.userProfile.addFeedback(movieId, feedback)
 
-        print("\n Feedback History:")
-        for movieId, feedback in self.userProfile.feedbackHistory.items():
-            movie = self.metadata[self.metadata["movieId"] == movieId].iloc[0]
-            movieTitle = movie["title"]
-            genres = movie["genres"]
-            label = "Liked" if feedback == 1 else "Disliked"
-            print(f" - {movieTitle}: {label}, Genres: {genres}")
-
         # Print profile summary
         summary = self.userProfile.getProfileSummary()
         print("\n📄 Profile Summary:")

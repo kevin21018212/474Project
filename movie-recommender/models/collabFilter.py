@@ -1,16 +1,19 @@
+import pandas as pd
 from typing import List
 import numpy as np
-import pandas as pd
 from sklearn.decomposition import TruncatedSVD
+from utils.omdbFetcher import OmdbFetcher
 
 class CollaborativeFilter:
-    def __init__(self, numFactors: int = 30):
+    def __init__(self, numFactors: int = 30, metadataDF: pd.DataFrame = None):
         self.numFactors = numFactors
         self.userFactors = None   # Matrix: each user → vector
         self.movieFactors = None  # Matrix: each movie → vector
         self.userIdMapping = None # userId → index in matrix
         self.movieIdMapping = None # movieId → index in matrix
         self.interactionMatrix = None
+        self.metadataDF = metadataDF  # Add metadataDF as an attribute
+        self.linksDF = pd.read_csv("ml-100k/links.csv")  # Load links.csv to map movieId to imdbId
 
     # Build user-movie matrix and train SVD model
     def trainModel(self, ratingsDF: pd.DataFrame) -> None:
@@ -25,7 +28,7 @@ class CollaborativeFilter:
         reducedMatrix = svd.fit_transform(self.interactionMatrix)
 
         self.userFactors = reducedMatrix               # (users × factors)
-        self.movieFactors = svd.components_.T           # (movies × factors)
+        self.movieFactors = svd.components_.T          # (movies × factors)
 
     # Predict a user's rating for a movie
     def predictRating(self, userId: int, movieId: int) -> float:
@@ -69,3 +72,46 @@ class CollaborativeFilter:
     # Helper: check if user and movie exist
     def _validUserMovie(self, userId: int, movieId: int) -> bool:
         return userId in self.userIdMapping and movieId in self.movieIdMapping
+
+    # Fetch title using OmdbFetcher if not found in metadata
+    def getMovieTitle(self, movieId: int, fetcher: OmdbFetcher) -> str:
+        # Check if movieId exists in metadataDF
+        match = self.metadataDF[self.metadataDF["movieId"] == movieId]
+        
+        if not match.empty:
+            title = match["title"].values[0]
+            return title
+
+        # If imdbId is missing in metadataDF, fetch it from links.csv
+        print(f"⚡️ MovieId {movieId} not found in metadataDF. Attempting to fetch imdbId from links.csv...")
+        imdbId = self.linksDF[self.linksDF["movieId"] == movieId]["imdbId"].values
+        if not imdbId:
+            print(f"imdbId not found for movieId {movieId} in links.csv")
+            return "Unknown Title"
+        
+        imdbId = imdbId[0]  # Get the imdbId
+        
+        # Fetch title using OmdbFetcher
+        fetched = fetcher.fetchMovie(movieId, imdbId)
+        if fetched and 'title' in fetched:
+            # Append to the metadata DataFrame
+            new_data = {
+                "movieId": movieId,
+                "title": fetched['title'],
+                "genres": fetched.get("genres", []),
+                "directors": fetched.get("directors", []),
+                "actors": fetched.get("actors", []),
+                "overview": fetched.get("overview", ""),
+                "voteAverage": fetched.get("voteAverage", 0),
+            }
+            new_metadata = pd.DataFrame([new_data])
+            self.metadataDF = pd.concat([self.metadataDF, new_metadata], ignore_index=True)
+
+            # Save the updated metadata and cache
+            self.metadataDF.to_csv("ml-100k/omdb_metadata.csv", index=False)
+            fetcher.saveCache()  # Update the cache file as well
+            
+            return fetched['title']
+
+        print(f"❌ Title not found for movieId {movieId}")
+        return "Unknown Title"

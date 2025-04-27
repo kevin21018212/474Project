@@ -20,6 +20,7 @@ class OmdbFetcher:
     def fetchMovie(self, movieId: int, imdbId: int) -> dict:
         imdbFormatted = f"tt{int(imdbId):07d}"
 
+        # Check if movieId is in the cache
         if movieId in self.cacheDF["movieId"].values:
             cachedRow = self.cacheDF[self.cacheDF["movieId"] == movieId].iloc[0].to_dict()
             cachedRow["genres"] = eval(cachedRow["genres"])
@@ -27,13 +28,16 @@ class OmdbFetcher:
             cachedRow["actors"] = eval(cachedRow["actors"])
             return cachedRow
 
+        # Fetch from OMDb API if not in cache
         response = requests.get(
             "https://www.omdbapi.com/",
             params={"apikey": self.apiKey, "i": imdbFormatted},
             timeout=5
         )
+    
         data = response.json()
         if data.get("Response") == "False":
+            print(f"❌ Error fetching movie {movieId} from OMDb: {data.get('Error', 'Unknown error')}")
             return {}
 
         movieData = {

@@ -4,23 +4,23 @@ import pandas as pd
 from models.collabFilter import CollaborativeFilter
 from utils.userProfile import UserProfile
 from tests.dataTester import DataTester
-
+from utils.omdbFetcher import OmdbFetcher
 
 class CollaborativeFilterTester:
-    def __init__(self, userProfile: UserProfile, ratingsDF: pd.DataFrame, metadataDF: pd.DataFrame):
+    def __init__(self, userProfile: UserProfile, ratingsDF: pd.DataFrame, metadataDF: pd.DataFrame, fetcher: OmdbFetcher):
         self.userProfile = userProfile
         self.ratingsDF = ratingsDF
         self.metadataDF = metadataDF
-        self.collabModel = None
+        self.fetcher = fetcher  # OmdbFetcher instance
+        self.collabModel = CollaborativeFilter(numFactors=30, metadataDF=metadataDF)  # Pass metadataDF to CollaborativeFilter
 
     def run(self):
         print("\n🚀 Running CollaborativeFilterTester...\n")
 
         # Initialize and train collaborative model
-        self.collabModel = CollaborativeFilter(numFactors=30)
         self.collabModel.trainModel(self.ratingsDF)
         print("✅ Trained collaborative model.")
-
+        
         # Recommend top-5 movies for the given user
         topMovies = self.collabModel.recommendMovies(userId=self.userProfile.userId, topN=5)
         print(f"\n🎬 Top-5 Recommended Movies for user {self.userProfile.userId}:")
@@ -44,11 +44,7 @@ class CollaborativeFilterTester:
         }
 
     def _getMovieTitle(self, movieId: int) -> str:
-        match = self.metadataDF[self.metadataDF["movieId"] == movieId]
-        if match.empty:
-            return "Unknown Title"
-        return match["title"].values[0]
-
+        return self.collabModel.getMovieTitle(movieId, self.fetcher)
 
 if __name__ == "__main__":
     # Load the data
@@ -61,6 +57,9 @@ if __name__ == "__main__":
     userProfileOutputs = UserProfileTester(metadata=metadataDF, featureMatrix=dataOutputs["featureMatrix"]).run()
     userProfile = userProfileOutputs["userProfile"]
 
+    # Initialize the OMDb fetcher
+    fetcher = OmdbFetcher(apiKey="766c1b0d")
+
     # Run collaborative filter tester
-    tester = CollaborativeFilterTester(userProfile=userProfile, ratingsDF=ratingsDF, metadataDF=metadataDF)
+    tester = CollaborativeFilterTester(userProfile=userProfile, ratingsDF=ratingsDF, metadataDF=metadataDF, fetcher=fetcher)
     tester.run()
