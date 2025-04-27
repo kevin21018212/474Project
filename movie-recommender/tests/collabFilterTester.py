@@ -19,17 +19,17 @@ class CollaborativeFilterTester:
 
         # Initialize and train collaborative model
         self.collabModel.trainModel(self.ratingsDF)
-        print("✅ Trained collaborative model.")
+        print(" Trained collaborative model.")
         
         # Recommend top-5 movies for the given user
         topMovies = self.collabModel.recommendMovies(userId=self.userProfile.userId, topN=5)
-        print(f"\n🎬 Top-5 Recommended Movies for user {self.userProfile.userId}:")
+        print(f"\nTop-5 Recommended Movies for user {self.userProfile.userId}:")
         for movieId in topMovies:
             title = self._getMovieTitle(movieId)
             print(f" - {title} ({movieId})")
 
         # Simulate feedback (user likes the top recommended movie)
-        print("\n🛠 Updating user vector based on feedback...")
+        print("\n Updating user vector based on feedback...")
         feedbackMovieId = topMovies[0]
         self.collabModel.updateUserVector(self.userProfile.userId, feedbackMovieId, feedback=1)
 
