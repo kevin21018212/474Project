@@ -39,9 +39,11 @@ def preprocessData(metadataDf, ratingsDf):
     return contentFeatures, binaryRatings
 
 
-# Initialize user profile with favorite movies
+# Setup user profile with favorite movies
 def initializeUser(userId: int, favoriteMovieIds: list) -> UserProfile:
-    pass
+    user = UserProfile(userId)
+    user.addFavorites(favoriteMovieIds)
+    return user
 
 # Train content and collaborative models
 def trainModels(metadataDF, ratingsDF):
