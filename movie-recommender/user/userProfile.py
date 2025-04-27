@@ -1,30 +1,46 @@
 import pandas as pd
 from typing import List
-
 class UserProfile:
     def __init__(self, userId: int):
         self.userId = userId
-        self.favoriteMovies = []  # List of movie IDs
-        self.feedbackHistory = {}  # {movieId: like/dislike}
-        self.contentVector = None  # Aggregated vector from metadata
-        self.collabVector = None   # Learned from matrix factorization
+        self.favoriteMovies = []       # List of movie IDs
+        self.feedbackHistory = {}      # {movieId: like/dislike (1/0)}
+        self.contentVector = None      # Aggregated feature vector
+        self.collabVector = None       # Latent factors from matrix factorization
 
-    # Add initial favorite movies during onboarding
+    # Add initial favorite movies 
     def addFavorites(self, movieIds: List[int]) -> None:
-        pass
+        self.favoriteMovies.extend(movieIds)
 
-    # Record user feedback for a given movie
+    # Record feedback for movie
     def addFeedback(self, movieId: int, feedback: int) -> None:
-        pass
+        self.feedbackHistory[movieId] = feedback
 
-    # Build content vector based on current favorites
+    # Build vector based on current favorites
     def buildContentVector(self, featureMatrix: pd.DataFrame) -> pd.Series:
-        pass
+        if not self.favoriteMovies:
+            raise ValueError("No favorite movies to build content vector.")
+        
+        # Filter feature matrix to only favorite movies
+        fav_features = featureMatrix.loc[self.favoriteMovies]
+        
+        # Take mean of favorite movie features
+        self.contentVector = fav_features.mean(axis=0)
+        return self.contentVector
 
-    # Update collaborative vector using learned embeddings
+    # Update using learned user factors
     def updateCollaborativeVector(self, userFactors: pd.DataFrame) -> None:
-        pass
+        if self.userId not in userFactors.index:
+            raise ValueError(f"User {self.userId} not found in collaborative model factors.")
+        
+        self.collabVector = userFactors.loc[self.userId]
 
-    # Retrieve most recent state of the user profile
+    # Get user profile
     def getProfileSummary(self) -> dict:
-        pass
+        return {
+            "userId": self.userId,
+            "favorites": self.favoriteMovies,
+            "feedbackHistory": self.feedbackHistory,
+            "contentVectorShape": None if self.contentVector is None else self.contentVector.shape,
+            "collabVectorShape": None if self.collabVector is None else self.collabVector.shape
+        }
