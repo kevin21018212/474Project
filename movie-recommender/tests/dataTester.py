@@ -11,7 +11,7 @@ class DataTester:
         print("\n🚀 Running Data Tester: \n")
 
         # Load and preprocess movie metadata
-        imdbLoader = IMDbLoader("ml-100k/links.csv")
+        imdbLoader = IMDbLoader("ml-100k/links.csv", apiKey="6d810392")
         self.metadata = imdbLoader.loadMetadata()
         self.cleanedMetadata = imdbLoader.preprocessMetadata()
         print(f" Loaded {len(self.cleanedMetadata)} movies metadata")

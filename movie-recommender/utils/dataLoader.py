@@ -4,28 +4,41 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from utils.helpers import normalizeVectors
 from utils.omdbFetcher import OmdbFetcher
 
+import pandas as pd
+from utils.helpers import normalizeVectors
+from utils.omdbFetcher import OmdbFetcher
+import os
+
 class IMDbLoader:
-    def __init__(self, linksPath: str, apiKey: str):
+    def __init__(self, linksPath: str, apiKey: str, cachePath: str = "ml-100k/omdb_metadata.csv"):
         self.linksPath = linksPath
         self.apiKey = apiKey
+        self.cachePath = cachePath
         self.metadataDF = None
-        self.fetcher = OmdbFetcher(apiKey)
+        self.fetcher = OmdbFetcher(apiKey, cachePath)
 
-    # Fetch metadata from OMDb using OmdbFetcher
+    # Fetch metadata from cache or OMDb using OmdbFetcher
     def loadMetadata(self, limit=None) -> pd.DataFrame:
-        links = pd.read_csv(self.linksPath)
-        if limit:
-            links = links.head(limit)
+        if os.path.exists(self.cachePath):
+            self.metadataDF = pd.read_csv(self.cachePath)
+            print(" Loaded cached OMDb metadata.")
+        else:
+            print(" No cache found. Fetching from OMDb API...")
+            links = pd.read_csv(self.linksPath)
+            if limit:
+                links = links.head(limit)
 
-        records = []
-        for _, row in links.iterrows():
-            movieId = row["movieId"]
-            imdbId = row["imdbId"]
-            movieData = self.fetcher.fetchMovie(movieId, imdbId)
-            if movieData:
-                records.append(movieData)
+            records = []
+            for _, row in links.iterrows():
+                movieId = row["movieId"]
+                imdbId = row["imdbId"]
+                movieData = self.fetcher.fetchMovie(movieId, imdbId)
+                if movieData:
+                    records.append(movieData)
 
-        self.metadataDF = pd.DataFrame(records)
+            self.metadataDF = pd.DataFrame(records)
+            self.metadataDF.to_csv(self.cachePath, index=False)
+
         return self.metadataDF
 
     # Clean metadata (drop missing titles/plots)
