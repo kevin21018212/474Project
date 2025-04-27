@@ -17,7 +17,6 @@ def loadData():
     # Load MovieLens ratings
     movielensLoader = MovieLensLoader("ml-100k/ratings.csv")
     ratingsDf = movielensLoader.loadRatings()
-    
     return metadataDf, ratingsDf
 
 # Preprocess metadata and ratings
@@ -35,10 +34,7 @@ def preprocessData(metadataDf, ratingsDf):
     # Binarize user ratings
     ratingsProcessor = RatingsPreprocessor(ratingsDf)
     binaryRatings = ratingsProcessor.binarizeRatings(threshold=3.5)
-
     return contentFeatures, binaryRatings
-
-
 
 #  user profile with favorite movies
 def initializeUser(userId: int, favoriteMovieIds: list) -> UserProfile:
