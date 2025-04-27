@@ -21,7 +21,7 @@ class IMDbLoader:
         except FileNotFoundError:
             print(" No cache found. Fetching from OMDb API...")
 
-            links = pd.read_csv(self.linksPath).head(100)
+            links = pd.read_csv(self.linksPath).head(400)
             links["imdbIdFormatted"] = links["imdbId"].apply(lambda x: f"tt{int(x):07d}")
 
             records = []
