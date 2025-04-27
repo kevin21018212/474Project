@@ -9,33 +9,33 @@ class DataTester:
 
     def run(self):
         # Load and preprocess movie metadata
-        imdb_loader = IMDbLoader("ml-100k/links.csv")
-        self.metadata = imdb_loader.loadMetadata()
-        self.cleaned_metadata = imdb_loader.preprocessMetadata()
-        print(f"✅ Loaded {len(self.cleaned_metadata)} movies metadata")
+        imdbLoader = IMDbLoader("ml-100k/links.csv")
+        self.metadata = imdbLoader.loadMetadata()
+        self.cleanedMetadata = imdbLoader.preprocessMetadata()
+        print(f"✅ Loaded {len(self.cleanedMetadata)} movies metadata")
 
         # Feature engineering
-        meta_proc = MetadataPreprocessor(self.cleaned_metadata)
-        cat_features = meta_proc.encodeCategoricalFeatures()
-        vote_features = meta_proc.normalizeVoteAverage()
+        metadataProcessor = MetadataPreprocessor(self.cleanedMetadata)
+        categoricalFeatures = metadataProcessor.encodeCategoricalFeatures()
+        voteFeatures = metadataProcessor.normalizeVoteAverage()
 
         # Combine features
-        self.featureMatrix = cat_features.join(vote_features)
-        self.featureMatrix.index = self.cleaned_metadata["movie_id"]
+        self.featureMatrix = categoricalFeatures.join(voteFeatures)
+        self.featureMatrix.index = self.cleanedMetadata["movieId"]
         print(f"✅ Feature matrix shape: {self.featureMatrix.shape}")
 
         # Load ratings
-        ml_loader = MovieLensLoader("ml-100k/ratings.csv")
-        self.ratings = ml_loader.loadRatings()
+        movieLensLoader = MovieLensLoader("ml-100k/ratings.csv")
+        self.ratings = movieLensLoader.loadRatings()
 
         # Preprocess ratings
-        ratings_proc = RatingsPreprocessor(self.ratings)
-        self.binaryRatings = ratings_proc.binarizeRatings(threshold=3.5)
+        ratingsProcessor = RatingsPreprocessor(self.ratings)
+        self.binaryRatings = ratingsProcessor.binarizeRatings(threshold=3.5)
         print(f"✅ Loaded {self.ratings['userId'].nunique()} users and {self.ratings['movieId'].nunique()} movies in ratings")
-        print(f"✅ Ratings binarized: {self.binaryRatings['binary_rating'].value_counts().to_dict()}")
+        print(f"✅ Ratings binarized: {self.binaryRatings['binaryRating'].value_counts().to_dict()}")
 
         return {
-            "metadata": self.cleaned_metadata,
+            "metadata": self.cleanedMetadata,
             "featureMatrix": self.featureMatrix,
             "binaryRatings": self.binaryRatings
         }

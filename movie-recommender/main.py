@@ -5,41 +5,42 @@ from models.collabFilter import CollaborativeRecommender
 from models.hybrid import HybridRecommender
 from utils.userProfile import UserProfile
 from utils.metrics import computeRmse, computePrecisionAtK
+from utils.dataLoader import IMDbLoader, MovieLensLoader, MetadataPreprocessor, RatingsPreprocessor
 
-# Load datasets (IMDb metadata, MovieLens ratings)
+# Load metadata and ratings
 def loadData():
-    # Load OMDb metadata (cache or by fetching from OMDb API)
+    # Load OMDb metadata (cache or fetch)
     imdbLoader = IMDbLoader("ml-100k/links.csv")
     metadataDf = imdbLoader.loadMetadata()
     metadataDf = imdbLoader.preprocessMetadata()
 
-    # Load ratings from ratings.csv and normalize scores
+    # Load MovieLens ratings
     movielensLoader = MovieLensLoader("ml-100k/ratings.csv")
     ratingsDf = movielensLoader.loadRatings()
-    ratingsDf = movielensLoader.preprocessRatings()
     
     return metadataDf, ratingsDf
 
 # Preprocess metadata and ratings
 def preprocessData(metadataDf, ratingsDf):
-    
-    # Create and apply metadata feature transformations
+    # Preprocess metadata into features
     metadataProcessor = MetadataPreprocessor(metadataDf)
 
-    Categories = metadataProcessor.encodeCategories()
-
-    # Convert movie plot text,normalize, and combine into a matrix
+    categories = metadataProcessor.encodeCategoricalFeatures()
     tfidfFeatures = metadataProcessor.applyTfidfToPlots()
-    voteFeatures = metadataProcessor.normalizeNumericalFeatures()
-    contentFeatures = Categories.join(tfidfFeatures).join(voteFeatures)
+    voteFeatures = metadataProcessor.normalizeVoteAverage()
+
+    # Combine all features into content feature matrix
+    contentFeatures = categories.join(tfidfFeatures).join(voteFeatures)
 
     # Binarize user ratings
     ratingsProcessor = RatingsPreprocessor(ratingsDf)
-    binaryRatings = ratingsProcessor.binarizeRatings(threshold=0.6)
+    binaryRatings = ratingsProcessor.binarizeRatings(threshold=3.5)
+
     return contentFeatures, binaryRatings
 
 
-# Setup user profile with favorite movies
+
+#  user profile with favorite movies
 def initializeUser(userId: int, favoriteMovieIds: list) -> UserProfile:
     user = UserProfile(userId)
     user.addFavorites(favoriteMovieIds)
