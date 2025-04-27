@@ -44,6 +44,7 @@ class IMDbLoader:
     # Clean metadata (drop missing titles/plots)
     def preprocessMetadata(self) -> pd.DataFrame:
         return self.metadataDF.dropna(subset=["title", "overview"]).fillna({"voteAverage": 0})
+
 #Load user ratings
 class MovieLensLoader:
     def __init__(self, ratingsPath: str):
