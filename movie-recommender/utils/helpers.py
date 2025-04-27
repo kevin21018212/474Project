@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+
 # Format and print top-N recommended movie titles
 def displayRecommendations(movieIds: list, movieMetadata: dict) -> None:
     print("\n🎬 Recommended Movies:")
@@ -7,9 +8,6 @@ def displayRecommendations(movieIds: list, movieMetadata: dict) -> None:
         title = movieMetadata.get(mid, "Unknown Title")
         print(f" - {title}")
 
-# Load config file or environment variables
-def loadConfig(configPath: str) -> dict:
-    pass
 # Compute cosine similarity between all vectors in a matrix
 def computeCosineSimilarityMatrix(featureMatrix: pd.DataFrame) -> pd.DataFrame:
     from sklearn.metrics.pairwise import cosine_similarity

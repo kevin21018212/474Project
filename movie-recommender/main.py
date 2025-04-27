@@ -4,7 +4,6 @@ from models.contentFilter import ContentBasedRecommender
 from models.collabFilter import CollaborativeRecommender
 from models.hybrid import HybridRecommender
 from utils.userProfile import UserProfile
-from utils.metrics import computeRmse, computePrecisionAtK
 from utils.dataLoader import IMDbLoader, MovieLensLoader, MetadataPreprocessor, RatingsPreprocessor
 
 # Load metadata and ratings
