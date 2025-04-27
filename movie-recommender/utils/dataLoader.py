@@ -1,68 +1,36 @@
 import pandas as pd
-import requests
-import time
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from utils.helpers import normalizeVectors
+from utils.omdbFetcher import OmdbFetcher
 
-# Fetch and preprocess movie metadata 
 class IMDbLoader:
-    def __init__(self, linksPath: str):
+    def __init__(self, linksPath: str, apiKey: str):
         self.linksPath = linksPath
+        self.apiKey = apiKey
         self.metadataDF = None
-        self.apiKey = "6d810392"
+        self.fetcher = OmdbFetcher(apiKey)
 
-    # Fetch metadata from OMDb using IMDb IDs
-    def loadMetadata(self) -> pd.DataFrame:
-    # Check for cached metadata
-        try:
-            self.metadataDF = pd.read_csv("ml-100k/omdb_metadata.csv")
-            print(" Loaded cached OMDb metadata.")
-        except FileNotFoundError:
-            print(" No cache found. Fetching from OMDb API...")
+    # Fetch metadata from OMDb using OmdbFetcher
+    def loadMetadata(self, limit=None) -> pd.DataFrame:
+        links = pd.read_csv(self.linksPath)
+        if limit:
+            links = links.head(limit)
 
-            links = pd.read_csv(self.linksPath).head(400)
-            links["imdbIdFormatted"] = links["imdbId"].apply(lambda x: f"tt{int(x):07d}")
+        records = []
+        for _, row in links.iterrows():
+            movieId = row["movieId"]
+            imdbId = row["imdbId"]
+            movieData = self.fetcher.fetchMovie(movieId, imdbId)
+            if movieData:
+                records.append(movieData)
 
-            records = []
-            for _, row in links.iterrows():
-                imdbId = row["imdbIdFormatted"]
-                try:
-                    response = requests.get(
-                        "https://www.omdbapi.com/",
-                        params={"apikey": self.apiKey, "i": imdbId},
-                        timeout=5
-                    )
-                    data = response.json()
-                    if data.get("Response") == "False":
-                        continue
-                    records.append({
-                        "movieId": row["movieId"],
-                        "title": data.get("Title", ""),
-                        "genres": data.get("Genre", "").split(", "),
-                        "directors": data.get("Director", "").split(", "),
-                        "actors": data.get("Actors", "").split(", ")[:3],
-                        "overview": data.get("Plot", ""),
-                        "voteAverage": float(data.get("imdbRating", 0)) if data.get("imdbRating") != "N/A" else 0
-                    })
-                except Exception as e:
-                    print(f"Error fetching {imdbId}: {e}")
-
-            self.metadataDF = pd.DataFrame(records)
-            self.metadataDF.to_csv("ml-100k/omdb_metadata.csv", index=False)
-
-        #Rename to camelcase
-        self.metadataDF.rename(columns={
-            "movie_id": "movieId",
-            "vote_average": "voteAverage"
-        }, inplace=True)
-
+        self.metadataDF = pd.DataFrame(records)
         return self.metadataDF
 
     # Clean metadata (drop missing titles/plots)
     def preprocessMetadata(self) -> pd.DataFrame:
         return self.metadataDF.dropna(subset=["title", "overview"]).fillna({"voteAverage": 0})
-
 #Load user ratings
 class MovieLensLoader:
     def __init__(self, ratingsPath: str):
