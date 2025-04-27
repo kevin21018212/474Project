@@ -45,14 +45,12 @@ class IMDbLoader:
                     "vote_average": float(d.get("imdbRating", 0)) if d.get("imdbRating", "N/A") != "N/A" else 0
                 })
             except Exception as e:
-                print(f"❌ Error fetching {imdb}: {e}")
+                print(f" Error fetching {imdb}: {e}")
 
         self.metadataDF = pd.DataFrame(records)
 
         # Cache for next time
         self.metadataDF.to_csv("ml-100k/omdb_metadata.csv", index=False)
-        print("💾 Cached OMDb metadata to ml-100k/omdb_metadata.csv")
-
         return self.metadataDF
 
 
@@ -85,7 +83,7 @@ class MetadataPreprocessor:
     def __init__(self, metadataDF: pd.DataFrame):
         self.metadataDF = metadataDF
 
-    # One-hot encode genres, directors, and actors
+    # Encode genres, directors, and actors
     def encodeCategoricalFeatures(self) -> pd.DataFrame:
         mlb = MultiLabelBinarizer()
 

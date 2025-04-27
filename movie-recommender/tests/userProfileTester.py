@@ -10,7 +10,7 @@ class UserProfileTester:
     def run(self):
         # Initialize user
         self.userProfile = UserProfile(userId=1)
-        print(f"✅ Created UserProfile for userId: {self.userProfile.userId}")
+        print(f" Created UserProfile for userId: {self.userProfile.userId}")
 
         # Add favorite movies
         favorite_movie_ids = self.metadata["movie_id"].head(5).tolist()
