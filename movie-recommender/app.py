@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify # type: ignore
-from user.userProfile import UserProfile
+from utils.userProfile import UserProfile
 from models.contentFilter import ContentBasedRecommender
 from models.collabFilter import CollaborativeRecommender
 from models.hybrid import HybridRecommender
