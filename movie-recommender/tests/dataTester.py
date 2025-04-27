@@ -8,6 +8,8 @@ class DataTester:
         self.binaryRatings = None
 
     def run(self):
+        print("\n🚀 Running Data Tester: \n")
+
         # Load and preprocess movie metadata
         imdbLoader = IMDbLoader("ml-100k/links.csv")
         self.metadata = imdbLoader.loadMetadata()

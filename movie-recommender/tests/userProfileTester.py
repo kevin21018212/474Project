@@ -1,5 +1,6 @@
 from utils.userProfile import UserProfile
 import pandas as pd
+import random
 
 class UserProfileTester:
     def __init__(self, metadata: pd.DataFrame, featureMatrix: pd.DataFrame):
@@ -8,33 +9,32 @@ class UserProfileTester:
         self.userProfile = None
 
     def run(self):
+        print("\n🚀 Running User Profile Tests: \n")
+
         # Initialize user
         self.userProfile = UserProfile(userId=1)
 
-        # Add favorite movies (first 5)
-        favoriteMovieIds = self.metadata["movieId"].head(5).tolist()
+        # Add favorite movies (increase to first 20 movies)
+        favoriteMovieIds = self.metadata["movieId"].head(20).tolist()  # Increased from 5 to 20
         self.userProfile.addFavorites(favoriteMovieIds)
-
-        print("\n Favorite Movies:")
-        for movieId in favoriteMovieIds:
-            movie = self.metadata[self.metadata["movieId"] == movieId].iloc[0]
-            print(f" - {movie['title']} ({movie['genres']}) by {movie['directors']}")
 
         # Build content vector
         self.featureMatrix.index = self.metadata["movieId"]
         contentVector = self.userProfile.buildContentVector(self.featureMatrix)
         print(f"\n Built content vector with shape: {contentVector.shape}")
 
-        # Add example feedback manually
-        feedbackExamples = {favoriteMovieIds[0]: 1, favoriteMovieIds[1]: 0}
+        # Add more feedback for the user (increase from 2 to 10 feedbacks)
+        feedbackExamples = {movieId: random.choice([1, 0]) for movieId in favoriteMovieIds[:10]}  # Give random feedback for the first 10 movies
         for movieId, feedback in feedbackExamples.items():
             self.userProfile.addFeedback(movieId, feedback)
 
         print("\n Feedback History:")
         for movieId, feedback in self.userProfile.feedbackHistory.items():
-            movieTitle = self.metadata[self.metadata["movieId"] == movieId]["title"].values[0]
+            movie = self.metadata[self.metadata["movieId"] == movieId].iloc[0]
+            movieTitle = movie["title"]
+            genres = movie["genres"]
             label = "Liked" if feedback == 1 else "Disliked"
-            print(f" - {movieTitle}: {label}")
+            print(f" - {movieTitle}: {label}, Genres: {genres}")
 
         # Print profile summary
         summary = self.userProfile.getProfileSummary()
