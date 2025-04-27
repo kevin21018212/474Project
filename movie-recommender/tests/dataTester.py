@@ -12,7 +12,7 @@ class DataTester:
         imdbLoader = IMDbLoader("ml-100k/links.csv")
         self.metadata = imdbLoader.loadMetadata()
         self.cleanedMetadata = imdbLoader.preprocessMetadata()
-        print(f"✅ Loaded {len(self.cleanedMetadata)} movies metadata")
+        print(f" Loaded {len(self.cleanedMetadata)} movies metadata")
 
         # Feature engineering
         metadataProcessor = MetadataPreprocessor(self.cleanedMetadata)
@@ -22,7 +22,7 @@ class DataTester:
         # Combine features
         self.featureMatrix = categoricalFeatures.join(voteFeatures)
         self.featureMatrix.index = self.cleanedMetadata["movieId"]
-        print(f"✅ Feature matrix shape: {self.featureMatrix.shape}")
+        print(f" Feature matrix shape: {self.featureMatrix.shape}")
 
         # Load ratings
         movieLensLoader = MovieLensLoader("ml-100k/ratings.csv")
@@ -31,8 +31,8 @@ class DataTester:
         # Preprocess ratings
         ratingsProcessor = RatingsPreprocessor(self.ratings)
         self.binaryRatings = ratingsProcessor.binarizeRatings(threshold=3.5)
-        print(f"✅ Loaded {self.ratings['userId'].nunique()} users and {self.ratings['movieId'].nunique()} movies in ratings")
-        print(f"✅ Ratings binarized: {self.binaryRatings['binaryRating'].value_counts().to_dict()}")
+        print(f" Loaded {self.ratings['userId'].nunique()} users and {self.ratings['movieId'].nunique()} movies in ratings")
+        print(f" Ratings binarized: {self.binaryRatings['binaryRating'].value_counts().to_dict()}")
 
         return {
             "metadata": self.cleanedMetadata,

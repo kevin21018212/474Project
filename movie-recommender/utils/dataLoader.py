@@ -51,14 +51,13 @@ class IMDbLoader:
             self.metadataDF = pd.DataFrame(records)
             self.metadataDF.to_csv("ml-100k/omdb_metadata.csv", index=False)
 
-        # ✅ Always rename after loading or fetching
+        #Rename to camelcase
         self.metadataDF.rename(columns={
             "movie_id": "movieId",
             "vote_average": "voteAverage"
         }, inplace=True)
 
         return self.metadataDF
-
 
     # Clean metadata (drop missing titles/plots)
     def preprocessMetadata(self) -> pd.DataFrame:

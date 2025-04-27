@@ -15,8 +15,7 @@ class UserProfileTester:
         favoriteMovieIds = self.metadata["movieId"].head(5).tolist()
         self.userProfile.addFavorites(favoriteMovieIds)
 
-        # Display favorite movies with details
-        print("\n🎬 Favorite Movies:")
+        print("\n Favorite Movies:")
         for movieId in favoriteMovieIds:
             movie = self.metadata[self.metadata["movieId"] == movieId].iloc[0]
             print(f" - {movie['title']} ({movie['genres']}) by {movie['directors']}")
@@ -24,15 +23,14 @@ class UserProfileTester:
         # Build content vector
         self.featureMatrix.index = self.metadata["movieId"]
         contentVector = self.userProfile.buildContentVector(self.featureMatrix)
-        print(f"\n🧠 Built content vector with shape: {contentVector.shape}")
+        print(f"\n Built content vector with shape: {contentVector.shape}")
 
         # Add example feedback manually
         feedbackExamples = {favoriteMovieIds[0]: 1, favoriteMovieIds[1]: 0}
         for movieId, feedback in feedbackExamples.items():
             self.userProfile.addFeedback(movieId, feedback)
 
-        # Show feedback history nicely
-        print("\n📝 Feedback History:")
+        print("\n Feedback History:")
         for movieId, feedback in self.userProfile.feedbackHistory.items():
             movieTitle = self.metadata[self.metadata["movieId"] == movieId]["title"].values[0]
             label = "Liked" if feedback == 1 else "Disliked"
