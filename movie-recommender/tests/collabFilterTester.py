@@ -1,7 +1,7 @@
 from typing import List
 import numpy as np
 import pandas as pd
-from models.collabFilter import CollaborativeFilter
+from models.collabFilter import CollaborativeRecommender  
 from utils.userProfile import UserProfile
 from tests.dataTester import DataTester
 from utils.omdbFetcher import OmdbFetcher
@@ -12,7 +12,7 @@ class CollaborativeFilterTester:
         self.ratingsDF = ratingsDF
         self.metadataDF = metadataDF
         self.fetcher = fetcher  # OmdbFetcher instance
-        self.collabModel = CollaborativeFilter(numFactors=30, metadataDF=metadataDF)  # Pass metadataDF to CollaborativeFilter
+        self.collabModel = CollaborativeRecommender(numFactors=30, metadataDF=metadataDF)  # Pass metadataDF to CollaborativeFilter
 
     def run(self):
         print("\n🚀 Running CollaborativeFilterTester...\n")
