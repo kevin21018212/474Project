@@ -4,7 +4,7 @@ from sklearn.decomposition import TruncatedSVD
 from utils.omdbFetcher import OmdbFetcher
 from typing import List
 
-class CollaborativeFilter:
+class CollaborativeRecommender:
     def __init__(self, numFactors: int = 30, metadataDF: pd.DataFrame = None):
         self.numFactors = numFactors
         self.metadataDF = metadataDF  # Movie metadata (movies, titles, etc.)

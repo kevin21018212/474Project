@@ -60,19 +60,25 @@ class MetadataPreprocessor:
         self.metadataDF = metadataDF
 
     # One-hot encode genres, directors, and actors
-    def encodeCategoricalFeatures(self) -> pd.DataFrame:
-        mlb = MultiLabelBinarizer()
-
-        genres = mlb.fit_transform(self.metadataDF["genres"])
-        genresDF = pd.DataFrame(genres, columns=[f"genre_{g}" for g in mlb.classes_])
-
-        directors = mlb.fit_transform(self.metadataDF["directors"])
-        directorsDF = pd.DataFrame(directors, columns=[f"director_{d}" for d in mlb.classes_])
-
-        actors = mlb.fit_transform(self.metadataDF["actors"])
-        actorsDF = pd.DataFrame(actors, columns=[f"actor_{a}" for a in mlb.classes_])
-
-        return pd.concat([genresDF, directorsDF, actorsDF], axis=1)
+    def encodeCategoricalFeatures(self):
+        if 'genres' not in self.metadataDF.columns:
+            return pd.DataFrame()  # Return empty DataFrame if no genres
+    
+        # Ensure genres are strings
+        genres = self.metadataDF['genres'].fillna('').astype(str)
+    
+    # If genres are pipe-separated (e.g., "Action|Adventure")
+        if any('|' in g for g in genres):
+            from sklearn.preprocessing import MultiLabelBinarizer
+            mlb = MultiLabelBinarizer()
+            return pd.DataFrame(
+                mlb.fit_transform(genres.str.split('|')),
+                columns=mlb.classes_,
+                index=self.metadataDF.index
+            )
+        else:
+            # Handle single-genre case
+            return pd.get_dummies(genres, prefix='genre')
 
     # Convert movie plots (overviews) into TF-IDF vectors
     def applyTfidfToPlots(self) -> pd.DataFrame:
@@ -88,9 +94,14 @@ class MetadataPreprocessor:
 
 #Binarize user ratings
 class RatingsPreprocessor:
-    def __init__(self, ratingsDF: pd.DataFrame):
-        self.ratingsDF = ratingsDF
+    def __init__(self, ratings_df):
+        # Ensure required columns exist
+        if 'rating' not in ratings_df.columns:
+            ratings_df['rating'] = 3.0  # Default rating
+        self.ratingsDF = ratings_df
 
-    def binarizeRatings(self, threshold: float = 3.5) -> pd.DataFrame:
-        self.ratingsDF["binaryRating"] = (self.ratingsDF["rating"] >= threshold).astype(int)
-        return self.ratingsDF
+    def binarizeRatings(self, threshold=3.5):
+        """Convert ratings to binary likes/dislikes"""
+        if 'rating' not in self.ratingsDF.columns:
+            raise ValueError("No rating column found")
+        return (self.ratingsDF['rating'] >= threshold).astype(int)
