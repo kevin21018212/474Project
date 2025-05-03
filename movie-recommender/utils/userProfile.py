@@ -1,16 +1,15 @@
 import pandas as pd
 from typing import List
 class UserProfile:
-    def __init__(self, userId: int):
+    def __init__(self, userId):  # Changed from user_id to userId
         self.userId = userId
-        self.favoriteMovies = []       # List of movie IDs
-        self.feedbackHistory = {}      # {movieId: like/dislike (1/0)}
-        self.contentVector = None      # Aggregated feature vector
-        self.collabVector = None       # Latent factors from matrix factorization
-
-    # Add initial favorite movies 
-    def addFavorites(self, movieIds: List[int]) -> None:
-        self.favoriteMovies.extend(movieIds)
+        self.favorites = []
+    
+    def addFavorites(self, movie_ids):
+        self.favorites.extend(movie_ids)
+    
+    def get_favorite_movies(self):
+        return self.favorites
 
     # Record feedback for movie
     def addFeedback(self, movieId: int, feedback: int) -> None:

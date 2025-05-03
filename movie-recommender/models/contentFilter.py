@@ -115,3 +115,13 @@ class ContentBasedRecommender:
             return (1 - weight) * user_profile + weight * movie_features
         else:
             return (1 + weight) * user_profile - weight * movie_features
+    @property
+    def movie_metadata(self):
+        """Safe access to metadata with fallback"""
+        if not hasattr(self, '_movie_metadata'):
+            self._movie_metadata = {}
+        return self._movie_metadata
+    
+    def get_movie_title(self, movie_id: int) -> str:
+        """Safe title lookup"""
+        return str(self.movie_metadata.get(movie_id, {}).get('title', f"Movie {movie_id}"))
