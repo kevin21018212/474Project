@@ -4,11 +4,6 @@ import numpy as np
 
 class HybridRecommender:
     def __init__(self, contentModel, collabModel, alpha: float = 0.5):
-        """
-        :param contentModel: Instance of ContentBasedFilter
-        :param collabModel: Instance of CollaborativeFilter
-        :param alpha: Weighting factor between content and collaborative (0–1)
-        """
         self.contentModel = contentModel
         self.collabModel = collabModel
         self.alpha = alpha
