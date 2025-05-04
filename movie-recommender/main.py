@@ -22,11 +22,18 @@ def loadData():
 def preprocessData(metadataDF, ratingsDF):
     metadataProcessor = MetadataPreprocessor(metadataDF)
 
-    genres = metadataProcessor.encodeCategoricalFeatures()
-    plots = metadataProcessor.applyTfidfToPlots()
-    votes = metadataProcessor.normalizeVoteAverage()
-    contentFeatures = pd.concat([genres, plots, votes], axis=1)
+    # One-hot encode genres, directors, actors
+    catFeatures = metadataProcessor.encodeCategoricalFeatures()
 
+    # TF-IDF on plot summaries
+    plotFeatures = metadataProcessor.applyTfidfToPlots()
+
+    # Normalize average rating
+    voteFeatures = metadataProcessor.normalizeVoteAverage()
+
+    # Combine all features into one DataFrame
+    contentFeatures = pd.concat([catFeatures, plotFeatures, voteFeatures], axis=1)
+    # Binarize ratings
     ratingsProcessor = RatingsPreprocessor(ratingsDF)
     binaryRatings = ratingsProcessor.binarizeRatings()
 
@@ -44,7 +51,7 @@ def trainModels(metadataDF, ratingsDF, contentFeatures):
     contentModel.featureMatrix = contentFeatures
     contentModel.movieIdToIndex = {mid: idx for idx, mid in enumerate(metadataDF["movieId"])}
 
-    collabModel = CollaborativeFilter(numFactors=30)
+    collabModel = CollaborativeFilter(numFactors=100)
     collabModel.trainModel(ratingsDF)
 
     hybridModel = HybridRecommender(contentModel, collabModel, alpha=0.5)
@@ -98,7 +105,7 @@ def runRecommendationPipeline(user: UserProfile, contentModel, collabModel, hybr
 
 
 # Evaluation placeholder
-def evaluateResults(recommendations, groundTruth, k=100):
+def evaluateResults(recommendations, groundTruth, k=5):
     prec = precisionAtK(recommendations, groundTruth, k)
     rec = recallAtK(recommendations, groundTruth, k)
     print(f"\n📊 Evaluation Results (at K={k}):")
