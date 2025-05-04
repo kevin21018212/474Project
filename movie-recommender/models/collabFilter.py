@@ -4,7 +4,7 @@ from sklearn.decomposition import TruncatedSVD
 from utils.omdbFetcher import OmdbFetcher
 from typing import List
 
-class CollaborativeRecommender:
+class CollaborativeFilter:
     def __init__(self, numFactors: int = 30, metadataDF: pd.DataFrame = None):
         self.numFactors = numFactors
         self.metadataDF = metadataDF  # Movie metadata (movies, titles, etc.)
@@ -30,10 +30,20 @@ class CollaborativeRecommender:
     
     # Predict the rating for a given user and movie
     def predictRating(self, userId: int, movieId: int) -> float:
+        # Handle cold-start users
+        if userId not in self.userIdMapping:
+            newIndex = len(self.userFactors)
+            self.userIdMapping[userId] = newIndex
+            newVec = np.zeros(self.userFactors.shape[1])
+            self.userFactors = np.vstack([self.userFactors, newVec])
+
+        if movieId not in self.movieIdMapping:
+            return 0.0
+
         uIdx = self.userIdMapping[userId]
         mIdx = self.movieIdMapping[movieId]
-        # Calculate the dot product of user and movie factors to get the predicted rating
         return np.dot(self.userFactors[uIdx], self.movieFactors[mIdx])
+
 
     def recommendMovies(self, userId: int, topN: int = 10) -> List[int]:
         # Get the user’s factor vector and compute similarity with all movies
@@ -50,53 +60,19 @@ class CollaborativeRecommender:
 
     # Update the user’s vector based on their feedback (like/dislike)
     def updateUserVector(self, userId: int, movieId: int, feedback: int) -> None:
-        # Get the index in matrix
+        if userId not in self.userIdMapping:
+            self.userIdMapping[userId] = len(self.userFactors)
+            newUserVector = np.zeros(self.userFactors.shape[1])
+            self.userFactors = np.vstack([self.userFactors, newUserVector])
+
         uIdx = self.userIdMapping[userId]
-        mIdx = self.movieIdMapping[movieId]
-        
-        # Calculate the error 
+        mIdx = self.movieIdMapping.get(movieId)
+        if mIdx is None:
+            return
+
         currentVector = self.userFactors[uIdx]
         movieVector = self.movieFactors[mIdx]
         error = feedback - np.dot(currentVector, movieVector)
+        self.userFactors[uIdx] += 0.1 * error * movieVector
 
-        # Update using Stochastic Gradient Descent (SGD)
-        learningRate = 0.1  #controls the update size
-        self.userFactors[uIdx] += learningRate * error * movieVector
 
-    def getMovieTitle(self, movieId: int, fetcher: OmdbFetcher) -> str:
-        # Look up the movie title in the metadata
-        match = self.metadataDF[self.metadataDF["movieId"] == movieId]
-        
-        if not match.empty:
-            return match["title"].values[0]  
-
-        # If movieId is not found, fetch imdbId, use OMDb to fetch stitle
-        imdbId = self.linksDF[self.linksDF["movieId"] == movieId]["imdbId"].values
-        if not imdbId:
-            return "Unknown Title" 
-        
-        imdbId = imdbId[0]  #first imdbId
-        
-        # Fetch title from OMDb using the fetched imdbId
-        fetched = fetcher.fetchMovie(movieId, imdbId)
-        if fetched and 'title' in fetched:
-            # Append the fetched movie data to metadataDF and save the updated metadata
-            new_data = {
-                "movieId": movieId,
-                "title": fetched['title'],
-                "genres": fetched.get("genres", []),
-                "directors": fetched.get("directors", []),
-                "actors": fetched.get("actors", []),
-                "overview": fetched.get("overview", ""),
-                "voteAverage": fetched.get("voteAverage", 0),
-            }
-            new_metadata = pd.DataFrame([new_data])
-            self.metadataDF = pd.concat([self.metadataDF, new_metadata], ignore_index=True)
-
-            # Save the updated metadata to the CSV file
-            self.metadataDF.to_csv("ml-100k/omdb_metadata.csv", index=False)
-            fetcher.saveCache()  # Update the cache file with the new movie data
-            
-            return fetched['title']  
-
-        return "Unknown Title"  

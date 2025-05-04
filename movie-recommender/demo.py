@@ -57,7 +57,16 @@ def run_demo():
         for title in liked_titles.split(","):
             title = title.strip().lower()
             match = metadataDF[metadataDF["title"].str.lower().str.contains(title)]
-            matched_ids.extend(match["movieId"].tolist())
+            if match.empty:
+                # Try fetching from OMDb
+                from utils.omdbFetcher import OmdbFetcher
+                fetcher = OmdbFetcher(apiKey="766c1b0d")
+                new_id = fetcher.addMovieByTitle(title)
+                if new_id:
+                    metadataDF = pd.concat([metadataDF, pd.DataFrame([new_id])], ignore_index=True)
+                    matched_ids.append(new_id["movieId"])
+            else:
+                matched_ids.extend(match["movieId"].tolist())
 
         if not matched_ids:
             print("❌ No matches found. Try again.")

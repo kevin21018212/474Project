@@ -1,127 +1,63 @@
 import pandas as pd
 import numpy as np
+from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.feature_extraction.text import TfidfVectorizer
-from typing import List, Dict, Union
-import re
+from utils.helpers import normalizeVectors
 
-class ContentBasedRecommender:
-    def __init__(self, metadata_df: pd.DataFrame):
-        self.metadata = metadata_df.set_index('movieId')
-        self.feature_matrix = self._build_feature_matrix()
-    
-    def _build_feature_matrix(self) -> pd.DataFrame:
-        """Build features with guaranteed non-empty output"""
-        # Ensure basic features exist
-        features = []
-        
-        # 1. Genre features (if available)
-        if 'genres' in self.metadata.columns:
-            genres = self.metadata['genres'].str.get_dummies(sep='|')
-            features.append(genres)
-        
-        # 2. Basic text features (fallback to title if no overview)
-        text_col = 'overview' if 'overview' in self.metadata.columns else 'title'
-        if text_col in self.metadata.columns:
-            from sklearn.feature_extraction.text import TfidfVectorizer
-            tfidf = TfidfVectorizer(
-                stop_words='english',
-                min_df=2,
-                token_pattern=r'\b\w{3,}\b'  # Only words with 3+ chars
-            )
-            try:
-                text_features = tfidf.fit_transform(self.metadata[text_col].fillna(''))
-                text_df = pd.DataFrame(
-                    text_features.toarray(),
-                    index=self.metadata.index,
-                    columns=[f"tfidf_{i}" for i in range(text_features.shape[1])]
-                )
-                features.append(text_df)
-            except ValueError:
-                pass
-        
-        # Combine all available features
-        if features:
-            return pd.concat(features, axis=1).fillna(0)
-        else:
-            # Fallback: use movie IDs as minimal features
-            return pd.DataFrame(
-                np.eye(len(self.metadata)),
-                index=self.metadata.index
-            )
-    
-    def build_user_profile(self, favorite_movie_ids: List[int]) -> pd.Series:
-        """Create normalized user profile vector"""
-        valid_ids = [mid for mid in favorite_movie_ids if mid in self.feature_matrix.index]
-        
-        if not valid_ids:
-            return pd.Series(0, index=self.feature_matrix.columns)
-        
-        profile = self.feature_matrix.loc[valid_ids].mean(axis=0)
-        # Normalize profile
-        norm = np.linalg.norm(profile)
-        return profile / norm if norm > 0 else profile
-    
-    def recommend_movies(self, user_profile: pd.Series, top_n: int = 10) -> List[Dict]:
-        """Get recommendations with guaranteed non-empty results"""
-        try:
-            # Ensure valid input shapes
-            if len(user_profile) == 0 or self.feature_matrix.shape[1] == 0:
-                return self._fallback_recommendations(top_n)
-                
-            similarities = cosine_similarity(
-                user_profile.values.reshape(1, -1),
-                self.feature_matrix
-            )[0]
-            
-            # Get top recommendations
-            movie_ids = self.feature_matrix.index
-            top_indices = np.argsort(similarities)[-top_n:][::-1]
-            
-            return [{
-                'movieId': movie_ids[i],
-                'title': self.metadata.loc[movie_ids[i], 'title'],
-                'score': float(similarities[i])
-            } for i in top_indices]
-            
-        except Exception:
-            return self._fallback_recommendations(top_n)
-    
-    def _fallback_recommendations(self, top_n: int) -> List[Dict]:
-        """Fallback when proper recommendations fail"""
-        return [{
-            'movieId': mid,
-            'title': self.metadata.loc[mid, 'title'],
-            'score': 1.0
-        } for mid in self.metadata.index[:top_n]]
+class ContentBasedFilter:
+    def __init__(self, metadataDF: pd.DataFrame):
+        self.metadataDF = metadataDF
+        self.featureMatrix = None
+        self.movieIdToIndex = {}
 
-    
-    def update_user_profile(self, user_profile: pd.Series, movie_id: int, 
-                          liked: bool = True, weight: float = 0.2) -> pd.Series:
-        """
-        Update user profile with new feedback
-        
-        Args:
-            user_profile: Current user profile vector
-            movie_id: Movie to incorporate feedback for
-            liked: Whether the user liked the movie
-            weight: How much to weight the new feedback (0-1)
-            
-        Returns:
-            Updated user profile vector
-        """
-        movie_features = self.feature_matrix.loc[movie_id]
-        if liked:
-            return (1 - weight) * user_profile + weight * movie_features
+    # Build feature matrix from metadata (genres, directors, actors, plot, voteAvg)
+    def buildFeatureMatrix(self) -> None:
+        from sklearn.preprocessing import MultiLabelBinarizer
+        from sklearn.feature_extraction.text import TfidfVectorizer
+
+        mlb = MultiLabelBinarizer()
+        genres = mlb.fit_transform(self.metadataDF["genres"])
+        genresDF = pd.DataFrame(genres, columns=[f"genre_{g}" for g in mlb.classes_])
+
+        directors = mlb.fit_transform(self.metadataDF["directors"])
+        directorsDF = pd.DataFrame(directors, columns=[f"director_{d}" for d in mlb.classes_])
+
+        actors = mlb.fit_transform(self.metadataDF["actors"])
+        actorsDF = pd.DataFrame(actors, columns=[f"actor_{a}" for a in mlb.classes_])
+
+        tfidf = TfidfVectorizer(max_features=100, stop_words="english")
+        plotTFIDF = tfidf.fit_transform(self.metadataDF["overview"].fillna(""))
+        plotDF = pd.DataFrame(plotTFIDF.toarray(), columns=tfidf.get_feature_names_out())
+
+        voteAvg = normalizeVectors(self.metadataDF[["voteAverage"]])
+        voteAvg.columns = ["voteAvgScaled"]
+
+        self.featureMatrix = pd.concat([genresDF, directorsDF, actorsDF, plotDF, voteAvg], axis=1)
+        self.featureMatrix.index = self.metadataDF["movieId"]
+        self.movieIdToIndex = {mid: idx for idx, mid in enumerate(self.metadataDF["movieId"])}
+
+    # Average the vectors of favorite movies to form a user profile
+    def buildUserProfile(self, favoriteMovieIds: List[int]) -> pd.Series:
+        validIds = [mid for mid in favoriteMovieIds if mid in self.featureMatrix.index]
+        if not validIds:
+            return pd.Series(np.zeros(self.featureMatrix.shape[1]), index=self.featureMatrix.columns)
+        return self.featureMatrix.loc[validIds].mean()
+
+    # Recommend movies by comparing user profile to all movies
+    def recommendMovies(self, userProfile: pd.Series, topN: int = 10) -> List[int]:
+        sims = cosine_similarity([userProfile], self.featureMatrix)[0]
+        topIndices = np.argsort(sims)[-topN:][::-1]
+        return self.featureMatrix.index[topIndices].tolist()
+
+    # Update user profile with new feedback (like/dislike)
+    def updateUserProfile(self, userProfile: pd.Series, movieId: int, feedback: int) -> pd.Series:
+        if movieId not in self.featureMatrix.index:
+            return userProfile
+
+        movieVector = self.featureMatrix.loc[movieId]
+        alpha = 0.1  # learning rate
+        if feedback == 1:
+            userProfile += alpha * (movieVector - userProfile)
         else:
-            return (1 + weight) * user_profile - weight * movie_features
-    @property
-    def movie_metadata(self):
-        """Safe access to metadata with fallback"""
-        if not hasattr(self, '_movie_metadata'):
-            self._movie_metadata = {}
-        return self._movie_metadata
-    
-    def get_movie_title(self, movie_id: int) -> str:
-        """Safe title lookup"""
-        return str(self.movie_metadata.get(movie_id, {}).get('title', f"Movie {movie_id}"))
+            userProfile -= alpha * (movieVector - userProfile)
+        return userProfile
