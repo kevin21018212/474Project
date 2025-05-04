@@ -17,20 +17,24 @@ class HybridRecommender:
             self.movie_metadata = {}
 
     def _get_movie_title(self, movie_id: int) -> str:
-        """Safe title lookup with multiple fallbacks"""
+        """Multi-layer fallback title lookup"""
+        # 1. Try content model's metadata
         try:
-            title = str(self.movie_metadata.get(movie_id, {}).get('title', ''))
+            title = self.contentModel.movie_metadata.get(movie_id, {}).get('title')
             if title:
-                return title
-                
-            # Fallback 1: Check content model
+                return str(title)
+        except:
+            pass
+        
+        # 2. Try content model's method
+        try:
             if hasattr(self.contentModel, 'get_movie_title'):
                 return str(self.contentModel.get_movie_title(movie_id))
-                
-            # Fallback 2: Generic title
-            return f"Movie {movie_id}"
         except:
-            return f"Movie {movie_id}"
+            pass
+        
+        # 3. Ultimate fallback
+        return f"Movie {movie_id}"
 
     def blendScores(self, userId: int, userProfile: pd.Series) -> Dict[int, float]:
         """Safe score blending with validation"""

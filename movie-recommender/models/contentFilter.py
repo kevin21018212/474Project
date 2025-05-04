@@ -6,9 +6,40 @@ from typing import List, Dict, Union
 import re
 
 class ContentBasedRecommender:
-    def __init__(self, metadata_df: pd.DataFrame):
-        self.metadata = metadata_df.set_index('movieId')
-        self.feature_matrix = self._build_feature_matrix()
+    def __init__(self, features_df):
+        self.features_df = features_df
+        self._movie_metadata = {}  # Private storage for metadata
+        
+        # Initialize with basic metadata if available
+        if 'movieId' in features_df.columns:
+            self._create_basic_metadata()
+
+    def _create_basic_metadata(self):
+        """Create minimal metadata from available features"""
+        basic_metadata = {}
+        for _, row in self.features_df.iterrows():
+            movie_id = row['movieId']
+            basic_metadata[movie_id] = {
+                'title': row.get('title', f"Movie {movie_id}"),
+                'genres': row.get('genres', 'Unknown')
+            }
+        self._movie_metadata = basic_metadata
+
+    @property
+    def movie_metadata(self):
+        """Get the movie metadata dictionary"""
+        return self._movie_metadata
+
+    @movie_metadata.setter
+    def movie_metadata(self, value):
+        """Set movie metadata with validation"""
+        if isinstance(value, dict):
+            self._movie_metadata = value
+        else:
+            print(f"⚠️ Invalid metadata format. Expected dict, got {type(value)}")
+            self._create_basic_metadata()  # Fallback to basic metadata
+
+    # ... [keep your existing methods] ...
     
     def _build_feature_matrix(self) -> pd.DataFrame:
         """Build features with guaranteed non-empty output"""

@@ -119,30 +119,39 @@ def preprocessData(metadataDf: pd.DataFrame, ratingsDf: pd.DataFrame) -> tuple[p
         return pd.DataFrame(), pd.DataFrame()
 
 def trainModels(contentFeatures, binaryRatings):
-    """Train models with guaranteed returns"""
+    """Train all models with complete error handling"""
     try:
         # Initialize models
         content_model = ContentBasedRecommender(contentFeatures)
         collab_model = CollaborativeRecommender(binaryRatings)
         
-        # Build metadata (safe for any DataFrame)
+        # Enhanced metadata handling
         try:
-            if not contentFeatures.empty and 'movieId' in contentFeatures.columns:
-                content_model.movie_metadata = contentFeatures.set_index('movieId') \
-                    .apply(lambda x: x.to_dict(), axis=1) \
-                    .to_dict()
+            if not contentFeatures.empty:
+                # Create comprehensive metadata
+                full_metadata = contentFeatures.set_index('movieId').apply(
+                    lambda x: x.to_dict(), axis=1
+                ).to_dict()
+                content_model.movie_metadata = full_metadata
         except Exception as e:
-            print(f"⚠️ Metadata creation failed: {str(e)}")
+            print(f"⚠️ Extended metadata creation failed: {e}")
+            # The basic metadata created in __init__ will be used
         
-        # Verify models are functional
-        if (hasattr(content_model, 'recommend_movies') and 
-            hasattr(collab_model, 'recommend_for_user')):
-            return content_model, collab_model, HybridRecommender(content_model, collab_model)
-            
-        raise RuntimeError("Essential model methods missing")
+        # Verify critical methods exist
+        required_methods = {
+            content_model: ['recommend_movies', 'build_user_profile'],
+            collab_model: ['recommend_for_user']
+        }
+        
+        for model, methods in required_methods.items():
+            for method in methods:
+                if not hasattr(model, method):
+                    raise AttributeError(f"Model missing required method: {method}")
+        
+        return content_model, collab_model, HybridRecommender(content_model, collab_model)
         
     except Exception as e:
-        print(f"❌ Model training failed: {str(e)}")
+        print(f"❌ Model training failed: {e}")
         return DummyContentModel(), DummyCollabModel(), None
 
 def get_user_favorites(ratingsDf: pd.DataFrame, userId: int, min_favorites: int = 3) -> List[int]:
