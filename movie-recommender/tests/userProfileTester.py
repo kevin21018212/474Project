@@ -1,4 +1,6 @@
+# ✅ File 2: tests/userProfileTester.py
 from utils.userProfile import UserProfile
+from tests.dataTester import DataTester
 import pandas as pd
 import random
 
@@ -9,47 +11,47 @@ class UserProfileTester:
         self.userProfile = None
 
     def run(self):
-        print("\n🚀 Running User Profile Tests: \n")
-
-        # Initialize user
+        print("\nRunning User Profile Tester\n")
         self.userProfile = UserProfile(userId=1)
+        fav_ids = self.metadata["movieId"].head(10).tolist()
+        self.userProfile.addFavorites(fav_ids)
 
-        # Add favorite movies (increase to first 20 movies)
-        favoriteMovieIds = self.metadata["movieId"].head(20).tolist()  # Increased from 5 to 20
-        self.userProfile.addFavorites(favoriteMovieIds)
+        print(f" Added {len(fav_ids)} favorites for user {self.userProfile.userId}:")
+     
 
-        # Build content vector
         self.featureMatrix.index = self.metadata["movieId"]
-        contentVector = self.userProfile.buildContentVector(self.featureMatrix)
-        print(f"\n Built content vector with shape: {contentVector.shape}")
+        profileVec = self.userProfile.buildContentVector(self.featureMatrix)
 
-        # Add more feedback for the user (increase from 2 to 10 feedbacks)
-        feedbackExamples = {movieId: random.choice([1, 0]) for movieId in favoriteMovieIds[:10]}  # Give random feedback for the first 10 movies
-        for movieId, feedback in feedbackExamples.items():
+        print(f"\n Built user content vector. Shape: {profileVec.shape}")
+        print(f" Content vector: {profileVec[:10]}")
+
+        print("\n Feedback on favorites:")
+        for movieId in fav_ids[:5]:
+            feedback = random.choice([0, 1])
             self.userProfile.addFeedback(movieId, feedback)
+            title = self.metadata.loc[self.metadata.movieId == movieId, "title"].values[0]
+            print(f"   - {'Like' if feedback else ' Dislike'} on '{title}' (movieId={movieId})")
 
-        # Print profile summary
-        summary = self.userProfile.getProfileSummary()
-        print("\n📄 Profile Summary:")
-        for key, value in summary.items():
-            print(f"{key}: {value}")
+        print("\n Profile Summary:")
+        print(self.userProfile.getProfileSummary())
+
+        print("\nCos similarity(top 5 favorite movies):")
+        from sklearn.metrics.pairwise import cosine_similarity
+        fav_matrix = self.featureMatrix.loc[fav_ids]
+        similarities = cosine_similarity([profileVec], fav_matrix)[0]
+        for mid, sim in zip(fav_ids[:5], similarities[:5]):
+            title = self.metadata.loc[self.metadata.movieId == mid, "title"].values[0]
+            print(f"   - {title} (movieId={mid}): {sim:.3f}")
 
         return {
             "userProfile": self.userProfile,
-            "contentVector": contentVector
+            "contentVector": profileVec
         }
 
+    
+
 if __name__ == "__main__":
-    from tests.dataTester import DataTester
-
-    # Load data
-    dataOutputs = DataTester().run()
-    featureMatrix = dataOutputs["featureMatrix"]
-    metadata = dataOutputs["metadata"]
-
-    # Run user profile tester
-    tester = UserProfileTester(
-        metadata=metadata,
-        featureMatrix=featureMatrix
-    )
+    data = DataTester().run()
+    tester = UserProfileTester(data["metadata"], data["featureMatrix"])
     tester.run()
+

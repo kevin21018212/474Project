@@ -6,56 +6,59 @@ from typing import List
 
 class CollaborativeFilter:
     def __init__(self, numFactors: int = 30, metadataDF: pd.DataFrame = None):
-        self.numFactors = numFactors  # How many patterns to learn 
-        self.metadataDF = metadataDF  # metadata about the movies
-        self.linksDF = pd.read_csv("ml-100k/links.csv")  # Map from MovieLens to IMDb 
+        self.numFactors = numFactors
+        self.metadataDF = metadataDF  # Movie metadata (movies, titles, etc.)
+        self.linksDF = pd.read_csv("ml-100k/links.csv")  # Mapping of movieId to imdbId 
 
-    # Build a matrix: users as rows, movies as columns, ratings as values
+    # Create a matrix of users and movies based on ratings
     def trainModel(self, ratingsDF: pd.DataFrame) -> None:
+       
+        # Rows: users, Columns: movies, Values: ratings
         self.interactionMatrix = ratingsDF.pivot_table(index="userId", columns="movieId", values="rating").fillna(0)
 
-        # Save index mappings so we can look up positions later
+        # Create a mapping from userId/movieId to matrix indices
         self.userIdMapping = {uid: idx for idx, uid in enumerate(self.interactionMatrix.index)}
         self.movieIdMapping = {mid: idx for idx, mid in enumerate(self.interactionMatrix.columns)}
-
-        # Apply matrix factorization using SVD 
+        
+        #Apply Singular Value Decomposition (SVD) to reduce dimensions
         svd = TruncatedSVD(n_components=self.numFactors, random_state=42)
         reducedMatrix = svd.fit_transform(self.interactionMatrix)
 
-        self.userFactors = reducedMatrix                    # One row per user
-        self.movieFactors = svd.components_.T               # One row per movie
-
-    #If user is new, give them a zero vector (cold start)
+        # Store the reduced matrices for users and movies
+        self.userFactors = reducedMatrix  # Matrix with user factor representations
+        self.movieFactors = svd.components_.T  # Matrix with movie factor representations
+    
+    # Predict the rating for a given user and movie
     def predictRating(self, userId: int, movieId: int) -> float:
+        # Handle cold-start users
         if userId not in self.userIdMapping:
             newIndex = len(self.userFactors)
             self.userIdMapping[userId] = newIndex
             newVec = np.zeros(self.userFactors.shape[1])
             self.userFactors = np.vstack([self.userFactors, newVec])
 
-        # If the movie wasn't seen during training, return 0 score
         if movieId not in self.movieIdMapping:
             return 0.0
 
         uIdx = self.userIdMapping[userId]
         mIdx = self.movieIdMapping[movieId]
-
-        # Predict rating by taking dot product between user and movie vectors
         return np.dot(self.userFactors[uIdx], self.movieFactors[mIdx])
 
-     # Get user vector and compute scores for every movie
+
     def recommendMovies(self, userId: int, topN: int = 10) -> List[int]:
+        # Get the user’s factor vector and compute similarity with all movies
         uIdx = self.userIdMapping[userId]
-        scores = self.userFactors[uIdx] @ self.movieFactors.T
+        scores = self.userFactors[uIdx] @ self.movieFactors.T  # Dot product to calculate movie scores
 
-        # Get indices of top N movies with highest scores
+        # Get the top N movie indices based on the scores
         topIndices = np.argsort(scores)[-topN:][::-1]
-
-        # Convert matrix indices back to real movieIds
+        
+        # Convert the movie indices back to movieIds using the movieId mapping
         movieIdxToId = {idx: mid for mid, idx in self.movieIdMapping.items()}
-        return [movieIdxToId[i] for i in topIndices]
+        topMovieIds = [movieIdxToId[i] for i in topIndices]
+        return topMovieIds
 
-     # If new user, initialize their vector
+    # Update the user’s vector based on their feedback (like/dislike)
     def updateUserVector(self, userId: int, movieId: int, feedback: int) -> None:
         if userId not in self.userIdMapping:
             self.userIdMapping[userId] = len(self.userFactors)
@@ -64,15 +67,10 @@ class CollaborativeFilter:
 
         uIdx = self.userIdMapping[userId]
         mIdx = self.movieIdMapping.get(movieId)
-
-        # If movie isn't known, skip update
         if mIdx is None:
             return
 
-        # Adjust user vector based on feedback (1 = liked, 0 = disliked)
         currentVector = self.userFactors[uIdx]
         movieVector = self.movieFactors[mIdx]
         error = feedback - np.dot(currentVector, movieVector)
-
-        # Simple gradient update (learn from the error)
         self.userFactors[uIdx] += 0.1 * error * movieVector
